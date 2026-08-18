@@ -1,17 +1,24 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-export async function handler(event) {
+export const handler = async (event) => {
+  // Hanya izinkan metode POST
   if (event.httpMethod !== "POST") {
-    return { statusCode: 405, body: JSON.stringify({ error: "Method Not Allowed" }) };
+    return { 
+      statusCode: 405, 
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ error: "Method Not Allowed. Gunakan POST." }) 
+    };
   }
 
   try {
-    const { query, difficulty } = JSON.parse(event.body || "{}");
+    const body = JSON.parse(event.body || "{}");
+    const { query, difficulty } = body;
 
     if (!query) {
       return {
         statusCode: 400,
-        body: JSON.stringify({ error: "Kata kunci resep harus diisi." }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: "Bahan atau nama masakan wajib diisi." }),
       };
     }
 
@@ -19,18 +26,19 @@ export async function handler(event) {
     if (!apiKey) {
       return {
         statusCode: 500,
-        body: JSON.stringify({ error: "API Key GEMINI_API_KEY belum dipasang di Netlify Environment Variables." }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ error: "API Key GEMINI_API_KEY belum dikonfigurasi di Netlify." }),
       };
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
     const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    const prompt = `Anda adalah koki profesional. Buatkan resep makanan dalam bahasa Indonesia berdasarkan data berikut:
+    const prompt = `Anda adalah koki profesional. Buatkan resep masakan dalam bahasa Indonesia berdasarkan kriteria berikut:
 - Bahan/Masakan: ${query}
-- Tingkat Kesulitan: ${difficulty}
+- Tingkat Kesulitan: ${difficulty || 'Bebas'}
 
-Keluarkan HANYA JSON murni (tanpa tanda backtick markdown) dengan format:
+Kembalikan HANYA format JSON valid tanpa tanda markdown (backtick) dengan struktur:
 {
   "title": "Nama Masakan",
   "description": "Deskripsi singkat",
@@ -44,22 +52,25 @@ Keluarkan HANYA JSON murni (tanpa tanda backtick markdown) dengan format:
     const result = await model.generateContent(prompt);
     let text = result.response.text();
 
-    // Membersihkan format markdown jika AI memberikan tag ```json
+    // Pembersihan pembungkus markdown jika ada
     text = text.replace(/```json/gi, "").replace(/```/g, "").trim();
-
     const recipeData = JSON.parse(text);
 
     return {
       statusCode: 200,
-      headers: { "Content-Type": "application/json" },
+      headers: { 
+        "Content-Type": "application/json",
+        "Access-Control-Allow-Origin": "*"
+      },
       body: JSON.stringify({ success: true, data: recipeData }),
     };
 
   } catch (error) {
+    console.error("Error Function:", error);
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ error: error.message }),
     };
   }
-}
+};
