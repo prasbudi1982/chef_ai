@@ -8,6 +8,6 @@
     "build": "echo 'Build complete'"
   },
   "dependencies": {
-    "@google/genai": "^0.1.2"
+    "@google/generative-ai": "^0.23.0"
   }
 }
