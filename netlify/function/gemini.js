@@ -1,22 +1,17 @@
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
-export async function handler(event, context) {
+export async function handler(event) {
   if (event.httpMethod !== "POST") {
-    return { 
-      statusCode: 405, 
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Method Not Allowed" }) 
-    };
+    return { statusCode: 405, body: JSON.stringify({ error: "Method Not Allowed" }) };
   }
 
   try {
-    const { query, difficulty, maxTime, servings } = JSON.parse(event.body || "{}");
+    const { query, difficulty } = JSON.parse(event.body || "{}");
 
     if (!query) {
       return {
         statusCode: 400,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ error: "Kata kunci resep atau bahan harus diisi." }),
+        body: JSON.stringify({ error: "Kata kunci resep harus diisi." }),
       };
     }
 
@@ -24,46 +19,35 @@ export async function handler(event, context) {
     if (!apiKey) {
       return {
         statusCode: 500,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ error: "API Key GEMINI_API_KEY belum dikonfigurasi di Netlify." }),
+        body: JSON.stringify({ error: "API Key GEMINI_API_KEY belum dipasang di Netlify Environment Variables." }),
       };
     }
 
     const genAI = new GoogleGenerativeAI(apiKey);
-    const model = genAI.getGenerativeModel({
-      model: "gemini-2.5-flash",
-      generationConfig: {
-        responseMimeType: "application/json",
-      }
-    });
+    const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
 
-    const userPrompt = `Anda adalah koki profesional berpengalaman. Buatkan resep masakan lezat dan akurat dalam bahasa Indonesia.
+    const prompt = `Anda adalah koki profesional. Buatkan resep makanan dalam bahasa Indonesia berdasarkan data berikut:
+- Bahan/Masakan: ${query}
+- Tingkat Kesulitan: ${difficulty}
 
-Kriteria Resep:
-- Kata kunci / Bahan: ${query}
-- Tingkat Kesulitan: ${difficulty || 'Bebas'}
-- Maksimal Waktu Memasak: ${maxTime ? maxTime + ' menit' : 'Bebas'}
-- Jumlah Porsi: ${servings ? servings + ' porsi' : 'Bebas'}
-
-Kembalikan jawaban dalam format JSON persis seperti struktur berikut:
+Keluarkan HANYA JSON murni (tanpa tanda backtick markdown) dengan format:
 {
-  "title": "Nama Resep",
-  "description": "Deskripsi singkat resep",
-  "prepTime": "30 menit",
-  "servings": "3 porsi",
-  "difficulty": "Sedang",
+  "title": "Nama Masakan",
+  "description": "Deskripsi singkat",
+  "prepTime": "20 menit",
+  "servings": "2 porsi",
+  "difficulty": "Mudah",
   "ingredients": ["Bahan 1", "Bahan 2"],
-  "steps": ["Langkah 1", "Langkah 2"],
-  "tips": ["Tip 1", "Tip 2"]
+  "steps": ["Langkah 1", "Langkah 2"]
 }`;
 
-    const result = await model.generateContent(userPrompt);
-    let responseText = result.response.text();
+    const result = await model.generateContent(prompt);
+    let text = result.response.text();
 
-    // Pembersih blok markdown ```json jika ikut terkirim oleh AI
-    responseText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+    // Membersihkan format markdown jika AI memberikan tag ```json
+    text = text.replace(/```json/gi, "").replace(/```/g, "").trim();
 
-    const recipeData = JSON.parse(responseText);
+    const recipeData = JSON.parse(text);
 
     return {
       statusCode: 200,
@@ -72,11 +56,10 @@ Kembalikan jawaban dalam format JSON persis seperti struktur berikut:
     };
 
   } catch (error) {
-    console.error("Gemini API Error:", error);
     return {
       statusCode: 500,
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ error: "Gagal menghasilkan resep: " + error.message }),
+      body: JSON.stringify({ error: error.message }),
     };
   }
 }
