@@ -45,7 +45,7 @@ Kriteria Resep:
 - Maksimal Waktu Memasak: ${maxTime ? maxTime + ' menit' : 'Bebas'}
 - Jumlah Porsi: ${servings ? servings + ' porsi' : 'Bebas'}
 
-Kembalikan jawaban dalam format JSON persis seperti struktur berikut tanpa tanda markdown/code block tambahan:
+Kembalikan jawaban dalam format JSON persis seperti struktur berikut:
 {
   "title": "Nama Resep",
   "description": "Deskripsi singkat resep",
@@ -58,7 +58,11 @@ Kembalikan jawaban dalam format JSON persis seperti struktur berikut tanpa tanda
 }`;
 
     const result = await model.generateContent(userPrompt);
-    const responseText = result.response.text();
+    let responseText = result.response.text();
+
+    // Pembersih blok markdown ```json jika ikut terkirim oleh AI
+    responseText = responseText.replace(/```json/g, '').replace(/```/g, '').trim();
+
     const recipeData = JSON.parse(responseText);
 
     return {
