@@ -1,0 +1,13 @@
+{
+  "name": "resep-ai-netlify",
+  "version": "1.0.0",
+  "description": "Aplikasi Pencarian Resep Berbasis AI Gemini di Netlify",
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "build": "echo 'Build complete'"
+  },
+  "dependencies": {
+    "@google/genai": "^0.1.1"
+  }
+}
