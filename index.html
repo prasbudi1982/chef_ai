@@ -5,28 +5,25 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Chef AI - Pencari Resep Masakan</title>
   
-  <!-- CDN Eruda untuk Console/Network Debugging di Mobile Browser -->
   <script src="https://cdn.jsdelivr.net/npm/eruda"></script>
   <script>eruda.init();</script>
 
   <style>
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: sans-serif; }
     body { background-color: #f4f6f9; color: #333; padding: 20px; display: flex; justify-content: center; }
-    .container { max-width: 650px; width: 100%; background: #fff; padding: 25px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.08); }
+    .container { max-width: 600px; width: 100%; background: #fff; padding: 20px; border-radius: 12px; box-shadow: 0 4px 10px rgba(0,0,0,0.1); }
     h1 { text-align: center; color: #d9534f; margin-bottom: 20px; }
-    .form-group { margin-bottom: 15px; }
-    label { display: block; margin-bottom: 5px; font-weight: bold; }
-    input, select, button { width: 100%; padding: 12px; border: 1px solid #ccc; border-radius: 6px; font-size: 16px; margin-top: 4px; }
-    button { background-color: #d9534f; color: white; border: none; font-weight: bold; cursor: pointer; transition: 0.2s; margin-top: 15px; }
-    button:hover { background-color: #c9302c; }
-    button:disabled { background-color: #cccccc; cursor: not-allowed; }
-    #resultContainer { margin-top: 25px; border-top: 2px solid #eee; padding-top: 20px; }
-    .recipe-card { background: #fafafa; padding: 20px; border-radius: 8px; border-left: 5px solid #d9534f; }
-    .recipe-meta { font-size: 14px; color: #666; margin: 10px 0 15px 0; background: #fff; padding: 10px; border-radius: 6px; }
-    ul, ol { margin-left: 20px; margin-bottom: 15px; }
-    li { margin-bottom: 6px; line-height: 1.5; }
-    .error-msg { color: #d9534f; background: #fdf7f7; padding: 12px; border: 1px solid #d9534f; border-radius: 6px; text-align: center; }
-    .loading-msg { text-align: center; color: #5bc0de; font-weight: bold; }
+    .form-group { margin-bottom: 12px; }
+    label { display: block; margin-bottom: 4px; font-weight: bold; font-size: 14px; }
+    input, select { width: 100%; padding: 10px; border: 1px solid #ccc; border-radius: 6px; font-size: 15px; }
+    button { width: 100%; padding: 12px; background-color: #d9534f; color: white; border: none; font-weight: bold; border-radius: 6px; font-size: 16px; margin-top: 10px; cursor: pointer; }
+    button:disabled { background-color: #aaa; }
+    #resultContainer { margin-top: 20px; border-top: 2px solid #eee; padding-top: 15px; }
+    .recipe-card { background: #fafafa; padding: 15px; border-radius: 8px; border-left: 4px solid #d9534f; }
+    .recipe-meta { font-size: 13px; color: #555; background: #fff; padding: 8px; border-radius: 4px; margin: 10px 0; }
+    ul, ol { margin-left: 20px; margin-bottom: 15px; font-size: 14px; }
+    li { margin-bottom: 5px; }
+    .error-box { color: #a94442; background-color: #f2dede; border: 1px solid #ebccd1; padding: 12px; border-radius: 6px; font-size: 14px; word-break: break-word; }
   </style>
 </head>
 <body>
@@ -34,118 +31,95 @@
   <div class="container">
     <h1>👨‍🍳 Chef AI Resep</h1>
     
-    <form id="searchForm">
-      <div class="form-group">
-        <label for="recipeQuery">Bahan / Nama Masakan:</label>
-        <input type="text" id="recipeQuery" placeholder="Contoh: Ayam, Telur, Cabai" required>
-      </div>
+    <div class="form-group">
+      <label for="recipeQuery">Bahan / Nama Masakan:</label>
+      <input type="text" id="recipeQuery" placeholder="Contoh: Ayam, Telur, Cabai">
+    </div>
 
-      <div class="form-group">
-        <label for="difficulty">Tingkat Kesulitan:</label>
-        <select id="difficulty">
-          <option value="Bebas">Bebas</option>
-          <option value="Mudah">Mudah</option>
-          <option value="Sedang">Sedang</option>
-          <option value="Sulit">Sulit</option>
-        </select>
-      </div>
+    <div class="form-group">
+      <label for="difficulty">Tingkat Kesulitan:</label>
+      <select id="difficulty">
+        <option value="Bebas">Bebas</option>
+        <option value="Mudah">Mudah</option>
+        <option value="Sedang">Sedang</option>
+        <option value="Sulit">Sulit</option>
+      </select>
+    </div>
 
-      <div class="form-group">
-        <label for="maxTime">Maksimal Waktu Memasak (Menit):</label>
-        <input type="number" id="maxTime" placeholder="Contoh: 30" min="5">
-      </div>
-
-      <div class="form-group">
-        <label for="servings">Porsi:</label>
-        <input type="number" id="servings" placeholder="Contoh: 2" min="1">
-      </div>
-
-      <button type="submit" id="searchBtn">Cari Resep AI</button>
-    </form>
+    <button type="button" id="btnCari" onclick="prosesCari()">Cari Resep AI</button>
 
     <div id="resultContainer"></div>
   </div>
 
   <script>
-    document.addEventListener("DOMContentLoaded", () => {
-      const searchForm = document.getElementById("searchForm");
-      const recipeQuery = document.getElementById("recipeQuery");
-      const difficulty = document.getElementById("difficulty");
-      const maxTime = document.getElementById("maxTime");
-      const servings = document.getElementById("servings");
-      const searchBtn = document.getElementById("searchBtn");
+    async function prosesCari() {
+      const query = document.getElementById("recipeQuery").value.trim();
+      const difficulty = document.getElementById("difficulty").value;
+      const btnCari = document.getElementById("btnCari");
       const resultContainer = document.getElementById("resultContainer");
 
-      searchForm.addEventListener("submit", async (e) => {
-        e.preventDefault();
+      if (!query) {
+        alert("Harap masukkan bahan atau nama masakan!");
+        return;
+      }
 
-        const query = recipeQuery.value.trim();
-        if (!query) return;
+      btnCari.disabled = true;
+      btnCari.innerText = "Memproses AI...";
+      resultContainer.innerHTML = "<p style='text-align:center;'>⏳ Sedang meracik resep dari Gemini AI...</p>";
 
-        searchBtn.disabled = true;
-        searchBtn.innerText = "Memproses AI...";
-        resultContainer.innerHTML = `<p class="loading-msg">⏳ Sedang meracik resep dari Gemini AI...</p>`;
+      try {
+        const response = await fetch("/.netlify/functions/gemini", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ query, difficulty })
+        });
 
-        try {
-          // Memanggil Netlify Function
-          const response = await fetch("/.netlify/functions/gemini", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              query: query,
-              difficulty: difficulty.value,
-              maxTime: maxTime.value,
-              servings: servings.value
-            })
-          });
+        const result = await response.json();
 
-          const result = await response.json();
-
-          if (!response.ok || !result.success) {
-            throw new Error(result.error || "Gagal mengambil data dari server.");
-          }
-
-          renderRecipe(result.data);
-
-        } catch (error) {
-          console.error("Search Error:", error);
-          resultContainer.innerHTML = `<div class="error-msg">❌ <strong>Error:</strong> ${error.message}</div>`;
-        } finally {
-          searchBtn.disabled = false;
-          searchBtn.innerText = "Cari Resep AI";
+        if (!response.ok || !result.success) {
+          throw new Error(result.error || "Gagal mendapatkan data dari AI server.");
         }
-      });
 
-      function renderRecipe(data) {
+        renderRecipe(result.data);
+
+      } catch (error) {
         resultContainer.innerHTML = `
-          <div class="recipe-card">
-            <h2>${data.title || "Resep Masakan"}</h2>
-            <p style="margin-top:5px; color:#555;"><em>${data.description || ""}</em></p>
-            
-            <div class="recipe-meta">
-              ⏱️ <strong>Waktu:</strong> ${data.prepTime || "-"} | 
-              🍽️ <strong>Porsi:</strong> ${data.servings || "-"} | 
-              📊 <strong>Tingkat:</strong> ${data.difficulty || "-"}
-            </div>
-
-            <h3 style="margin-bottom:10px;">Bahan-bahan:</h3>
-            <ul>
-              ${(data.ingredients || []).map(item => `<li>${item}</li>`).join('')}
-            </ul>
-
-            <h3 style="margin-bottom:10px;">Langkah Pembuatan:</h3>
-            <ol>
-              ${(data.steps || []).map(step => `<li>${step}</li>`).join('')}
-            </ol>
-
-            ${data.tips && data.tips.length ? `
-              <h3 style="margin-bottom:10px;">Tips Tambahan:</h3>
-              <ul>${data.tips.map(tip => `<li>${tip}</li>`).join('')}</ul>
-            ` : ''}
+          <div class="error-box">
+            ❌ <strong>Gagal Memuat Resep:</strong><br>
+            ${error.message}
           </div>
         `;
+      } finally {
+        btnCari.disabled = false;
+        btnCari.innerText = "Cari Resep AI";
       }
-    });
+    }
+
+    function renderRecipe(data) {
+      const container = document.getElementById("resultContainer");
+      
+      const ingredientsHtml = (data.ingredients || []).map(i => `<li>${i}</li>`).join("");
+      const stepsHtml = (data.steps || []).map(s => `<li>${s}</li>`).join("");
+
+      container.innerHTML = `
+        <div class="recipe-card">
+          <h2>${data.title || "Resep Masakan"}</h2>
+          <p style="font-style:italic; font-size:13px; margin-top:4px;">${data.description || ""}</p>
+          
+          <div class="recipe-meta">
+            ⏱️ <strong>Waktu:</strong> ${data.prepTime || "-"} | 
+            🍽️ <strong>Porsi:</strong> ${data.servings || "-"} | 
+            📊 <strong>Tingkat:</strong> ${data.difficulty || "-"}
+          </div>
+
+          <h4 style="margin-bottom:6px;">Bahan-bahan:</h4>
+          <ul>${ingredientsHtml}</ul>
+
+          <h4 style="margin-bottom:6px;">Langkah-langkah:</h4>
+          <ol>${stepsHtml}</ol>
+        </div>
+      `;
+    }
   </script>
 </body>
 </html>
